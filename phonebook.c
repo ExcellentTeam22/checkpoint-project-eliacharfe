@@ -3,22 +3,27 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdbool.h>
 
+#define MAX_NAME 31
+#define MAX_TEL 15
+#define TOTAL_CONTACTS 10
 
-struct contact{
-    char fname[31];
-    char lname[31];
-    char telep[15];
-    char cellp[15];
+struct Contact{
+    char fname[MAX_NAME];
+    char lname[MAX_NAME];
+    char telep[MAX_TEL];
+    char cellp[MAX_TEL];
 
-    struct contact* next;
+    struct Contact* next;
 };
 
-#define TOTAL_CONTACTS 10
-struct contact A[TOTAL_CONTACTS];
+struct Contact* DB = NULL;
 
-size_t  get_input(char * dest, size_t max);
+size_t get_input(char * dest, size_t max);
 void free_list();
+FILE * open_file(char* path, char* mode);
+void read_file_insert_to_DB(FILE * file);
 
 void clrscr(void);
 void gotoxy(int x, int y);
@@ -40,21 +45,16 @@ void sortc(void);
 void help(void);
 int last = 0;
 
-struct contact* DB = NULL;
-
+//----------------------------
 int main()
 {
-    FILE *fptr;
-    fptr = fopen("/home/eliachar/Documents/GitHub/checkpoint-project-eliacharfe/check-point/phonebookFile","r");
-    if(fptr == NULL)
-    {
-        printf("Error openning file!");
-        exit(1);
-    }
+    FILE *fptr = open_file("/home/eliachar/Documents/GitHub/checkpoint-project-eliacharfe/check-point/phonebookFile","r");
+    read_file_insert_to_DB(fptr);
 
-    int count=1;
+    bool isRunning = true;
     char n;
-    while(count) {
+
+    while(isRunning) {
         clrscr();
         printf("\n|Phone Book12<::>Home|\n");
         printf("--------------------------------------------------------------------------------\n");
@@ -68,7 +68,7 @@ int main()
         printf("\t[7] |--> Help\n");
         printf("\t[8] |--> Exit\n");
         printf("\n\tPlease Enter Your Choice (1-8): ");
-        n = getc(stdin);
+        n = (char)getc(stdin);
         getc(stdin);
         switch(n) {
             case '1':
@@ -93,9 +93,7 @@ int main()
                 help();
                 break;
             case '8':
-                free_list();
-                fclose(fptr);
-                exit(0);
+                isRunning = false;
                 break;
             default:
                 printf("\nThere is no item with symbol \"%c\".Please enter a number between 1-8!\nPress any key to continue...",n);
@@ -103,27 +101,67 @@ int main()
                 getc(stdin);
                 break;
         }//End of swicth
-//        count++;
     }
     free_list();
     fclose(fptr);
-    return 0;
+    return EXIT_SUCCESS;
 }//End of main function!
+//-----------------------------------------
 
+FILE * open_file(char* path, char *mode)
+{
+    FILE* fptr = fopen(path, mode);
+    if(fptr == NULL)
+    {
+        printf("Error openning file!");
+        exit(1);
+    }
+    return fptr;
+}
+//------------------------------
+void read_file_insert_to_DB(FILE * file)
+{
+    char * inpfile = NULL;
 
-void free_list() {
+    while(file){
+        struct Contact *temp = NULL;
+        temp = (struct Contact *) malloc(sizeof(struct Contact));
+        size_t len = 0;
+        size_t len_size = 0;
+        if((len_size = getline(&inpfile, &len, file)) == EOF)
+            break;
 
-    struct contact *temp = DB ;
+        char * token = strtok(inpfile, "\t");
+
+        char* first_name = token;
+        strncpy(temp->fname, first_name, MAX_NAME);
+
+        char* last_name = strtok(NULL, "\t");
+        strncpy(temp->lname, last_name, MAX_NAME);
+
+        char * tel = strtok(NULL, "\t");
+        strncpy(temp->telep, tel, MAX_TEL);
+
+        char * cell = strtok(NULL, "\t");
+        strncpy(temp->cellp, cell, MAX_TEL);
+
+        temp->next = DB;
+        DB = temp;
+        puts(cell);
+    }
+
+}
+//-----------------------------
+void free_list()
+{
+    struct Contact *temp = DB ;
     while (DB != NULL) {
-
         temp = DB;
         DB = DB->next ;
         free(temp);
-
     }
 }
-
-
+//---------------------------
 size_t get_input(char *dest, size_t max)
 {
     char * temp = NULL;
@@ -145,9 +183,9 @@ size_t get_input(char *dest, size_t max)
     free(temp);
     return len_size;
 }
-
+//--------------------------
 void print(){
-    struct contact *temp = DB;
+    struct Contact *temp = DB;
     int i = 1;
     while(temp != NULL)
     {
@@ -158,11 +196,10 @@ void print(){
         printf("Tel: %s\n ",temp->telep);
         printf("Cell: %s\n ",temp->cellp);
         temp = temp->next;
-
         i++;
     }
 }
-
+//--------------------------------
 void insert()
 {
     char ans='y';
@@ -170,62 +207,60 @@ void insert()
     printf("\nPhone Book12<::>Insert Contacts");
     printf("\n--------------------------------------------------------------------------------");
 
-    while(ans=='y'){
-        if(last == TOTAL_CONTACTS)
+    while(ans == 'y') {
+        if (last == TOTAL_CONTACTS)
             last = 0;
-        else{
-            struct contact * temp = NULL;
-            temp = (struct contact*)malloc(sizeof(struct contact));
+        else {
+            struct Contact *temp = NULL;
+            temp = (struct Contact *) malloc(sizeof(struct Contact));
 
-            printf("\n\nData of Contact %2.2d{\n",last+1);
+            printf("\n\nData of Contact %2.2d{\n", last + 1);
 
             printf("\n\t  1-F.Name: ");
-            get_input(temp->fname, 31);
-//            get_input(A[last].fname, 31);
+            get_input(temp->fname, MAX_NAME);
 
             printf("\t  2-L.Name: ");
-            get_input(temp->lname, 31);
+            get_input(temp->lname, MAX_NAME);
 
             printf("\t  3-Tele.P: ");
-            get_input(temp->telep, 15);
+            get_input(temp->telep, MAX_TEL);
 
             printf("\t  4-Cell.P: ");
-            get_input(temp->cellp, 15);
+            get_input(temp->cellp, MAX_TEL);
 
             temp->next = DB;
             DB = temp;
 
             printf("\n|-->Data Recorded!}");
             printf("\n\t\t\tNext Contact?(y/n) Answer:");
-            ans = (char)getc(stdin);
+            ans = (char) getc(stdin);
             getc(stdin);
             last++;
         }
     }
 
-//    print();
-
-    printf("\n\nYou have inserted ( %d ) contact!\nPress a key to return main page & continue program|-->",last);
+    printf("\n\nYou have inserted ( %d ) Contact!\nPress a key to return main page & continue program|-->",last);
     getc(stdin);
 }
-
+//--------------------------
 void delet(void)
 {
-    char dfname_string[31],dlname_string[31];
-    int i = 0,j = 0,find=0;
+    char dfname_string[MAX_NAME], dlname_string[MAX_NAME];
+    int i = 0;
+    bool found = false;
     char ch;
     clrscr();
     printf("\nPhone Book12<::>Delete Contacts");
     printf("\n--------------------------------------------------------------------------------");
-    printf ("\n::Enter data of the contact that you want delete it,please:");
+    printf ("\n::Enter data of the Contact that you want delete it,please:");
 
     printf("\n\n  ::Enter first name: ");
-    get_input(dfname_string, 31);
+    get_input(dfname_string, MAX_NAME);
 
     printf("\n  ::Enter last name: ");
-    get_input(dlname_string, 31);
+    get_input(dlname_string, MAX_NAME);
 
-    struct contact* temp = DB;
+    struct Contact* temp = DB;
 
     if (strcmp (dfname_string, DB->fname) == 0 && strcmp (dlname_string, DB->lname) == 0 ) {
         temp = DB;
@@ -234,7 +269,7 @@ void delet(void)
         return;
     }
 
-    struct contact *curr  = DB;
+    struct Contact *curr  = DB;
     while (curr->next != NULL)
     {
         if (strcmp (dfname_string, curr->next->fname) == 0 && strcmp (dlname_string, curr->next->lname) == 0 ) {
@@ -242,15 +277,15 @@ void delet(void)
             printf("\n\nCantact %2.2d{",i+1);
             printf("\n\t   F.Name:%s\n\t   L.name:%s\n\t   Tele.P:%s\n\t   Cell.P:%s\n\t   }",
                    curr->next->fname,curr->next->lname,curr->next->telep,curr->next->cellp);
-            printf("\n\nAre you sure you want to delete this contact?(y/n)");
-            ch = getc(stdin);
+            printf("\n\nAre you sure you want to delete this Contact?(y/n)");
+            ch = (char)getc(stdin);
             getc(stdin);
             if (ch == 'y') {
                 temp = curr->next;
                 curr->next = curr->next->next;
                 free(temp);
                 last--;
-                find = 1;
+                found = true;
                 break;
             }
         }
@@ -260,67 +295,66 @@ void delet(void)
         }
     }
 
-    if (find==0)
-        printf("\t\t\n<<This contact does not exist in this list or program can not delete it.>>");
+    if (!found)
+        printf("\t\t\n<<This Contact does not exist in this list or program can not delete it.>>");
     else
-        printf("\t\t\n<<Target contact was successfully deleted from list!>>");
+        printf("\t\t\n<<Target Contact was successfully deleted from list!>>");
     printf("\n\n\nPress a key to return main page & continue program|-->");
     getc(stdin);
 }
-
+//------------------------------------
 void edit()
 {
-//    char input[31];
-    char dfname[31] , dlname[31];
-    size_t len=0;
-    size_t len_size=0;
-    int i = 0,j = 0,find=0;
+    char dfname[MAX_NAME] , dlname[MAX_NAME];
+    int i = 0;
+    bool found = false;
     char ch;
     clrscr();
     printf("\nPhone Book12<::>Edit Contacts");
     printf("\n--------------------------------------------------------------------------------");
-    printf ("\n::Enter data of the contact that you want edit it,please:");
+    printf ("\n::Enter data of the Contact that you want edit it,please:");
 
     printf("\n\n  ::Enter first name: ");
-    get_input(dfname, 31);
+    get_input(dfname, MAX_NAME);
 
     printf("\n  ::Enter last name: ");
-    get_input(dlname, 31);
+    get_input(dlname, MAX_NAME);
 
     while (DB != NULL){
         puts(DB->fname);
         puts(DB->lname);
-        if (strcmp (dfname, DB->fname) == 0 && strcmp (dlname, DB->lname) == 0 ) {
+        if (strcmp (dfname, DB->fname) == 0 && strcmp (dlname, DB->lname) == 0) {
             printf("\nContact found! Details:");
             printf("\n\nCantact %2.2d{",i+1);
-            printf("\n\t   F.Name:%s\n\t   L.name:%s\n\t   Tele.P:%s\n\t   Cell.P:%s\n\t   }",A[i].fname,A[i].lname,A[i].telep,A[i].cellp);
+            printf("\n\t   F.Name:%s\n\t   L.name:%s\n\t   Tele.P:%s\n\t   Cell.P:%s\n\t   }",
+                   DB->fname, DB->lname, DB->telep, DB->cellp);
             printf("\n\nDo you want edit it?(y/n) ");
-            ch = getc(stdin);
+            ch = (char)getc(stdin);
             getc(stdin);
-            if(ch=='y'){
+            if(ch == 'y'){
                 printf("\n >|Enter new first name: ");
-                get_input(DB->fname, 31);
+                get_input(DB->fname, MAX_NAME);
 
                 printf(" >|Enter new last name: ");
-                get_input(DB->lname, 31);
+                get_input(DB->lname, MAX_NAME);
 
                 printf(" >|Enter new telephone number: ");
-                get_input(DB->telep, 15);
+                get_input(DB->telep, MAX_TEL);
 
                 printf(" >|Enter new cellphone number: ");
-                get_input(DB->cellp, 15);
+                get_input(DB->cellp, MAX_TEL);
 
-                find=1;
+                found = true;
                 break;
             }
         }
         DB = DB->next;
     }
 
-    if (find==0)
-        printf("\t\t\n<<This contact does not exist or you chose not to Edit it.>>");
+    if (!found)
+        printf("\t\t\n<<This Contact does not exist or you chose not to Edit it.>>");
     else
-        printf("\t\t\n<<Target contact was successfully updated!>>");
+        printf("\t\t\n<<Target Contact was successfully updated!>>");
     printf("\n\n\n   ::Press a key to return main page & continue program|-->");
     getc(stdin);
 }
@@ -338,7 +372,7 @@ void search(void)
     printf("\t[4] |--> Search by cellphone number\n");
     printf("\t[5] |--> Main Menu\n");
     printf("\n\t::Enter a number (1-5): ");
-    ch = getc(stdin);
+    ch = (char)getc(stdin);
     getc(stdin);
     printf("\n--------------------------------------------------------------------------------");
     switch(ch) {
@@ -362,11 +396,11 @@ void search(void)
 
 void searchf(void)
 {
-    char fname[31];
+    char fname[MAX_NAME];
     int i = 0,find=0;
 
     printf("Enter a first name to search:");
-    get_input(fname, 31);
+    get_input(fname, MAX_NAME);
 
     while (DB != NULL) {
         if(strcmp(fname,DB->fname) == 0) {
@@ -377,102 +411,108 @@ void searchf(void)
     }
 
     if(find == 0)
-        printf("\t\n<<Not Find!There is no contact with this name in phone book.>>");
+        printf("\t\n<<Not Find!There is no Contact with this name in phone book.>>");
     else {
-        printf("\t\n<<Target contact found! Details:>>");
+        printf("\t\n<<Target Contact found! Details:>>");
         printf("\n\nCantact %2.2d{",i+1);
         printf("\n\t   F.Name:%s\n\t   L.name:%s\n\t   Tele.P:%s\n\t   Cell.P:%s\n\t   }",
                DB->fname, DB->lname, DB->telep, DB->cellp);
     }
-    printf("\nPress a key to search another contact.");
+    printf("\nPress a key to search another Contact.");
     getc(stdin);
     search();
 }
 
 void searchl(void)
 {
-    char lname[31];
-    int i = 0,find=0;
+    char lname[MAX_NAME];
+    int i = 0;
+    bool found = false;
 
     printf("\n::Enter a last name to search:");
-    get_input(lname, 31);
+    get_input(lname, MAX_NAME);
 
     while (DB != NULL) {
         if(strcmp(lname,DB->fname) == 0) {
-            find = 1;
+            found = true;
             break;
         }
         DB = DB->next;
+        ++i;
     }
 
-    if(find == 0)
-        printf("\t\n<<Not Find!There is no contact with this name in phone book.>>");
+    if(!found)
+        printf("\t\n<<Not Find!There is no Contact with this name in phone book.>>");
     else {
-        printf("\t\n<<Target contact found! Details:>>");
+        printf("\t\n<<Target Contact found! Details:>>");
         printf("\n\nCantact %2.2d{",i+1);
         printf("\n\t   F.Name:%s\n\t   L.name:%s\n\t   Tele.P:%s\n\t   Cell.P:%s\n\t   }",
                DB->fname, DB->lname, DB->telep, DB->cellp);
     }
-    printf("\nPress a key to search another contact.");
+    printf("\nPress a key to search another Contact.");
     getc(stdin);
     search();
 }
 
 void searchp(void)
 {
-    char telep[15];
-    int i,find=0;
+    char telep[MAX_TEL];
+    int i;
+    bool found = false;
 
     printf("\n::Enter a phone number to search:");
-    get_input(telep, 15);
+    get_input(telep, MAX_TEL);
 
     while (DB != NULL) {
         if(strcmp(telep, DB->fname) == 0) {
-            find = 1;
+            found = true;
             break;
         }
         DB = DB->next;
+        ++i;
     }
 
-    if(find == 0)
-        printf("\t\n<<Not Find!There is no contact with this tel number in phone book.>>");
+    if(!found)
+        printf("\t\n<<Not Find!There is no Contact with this tel number in phone book.>>");
     else {
-        printf("\t\n<<Target contact found! Details:>>");
-        printf("\n\nCantact %2.2d{",i+1);
+        printf("\t\n<<Target Contact found! Details:>>");
+        printf("\n\nCantact %2.2d{", i + 1);
         printf("\n\t   F.Name:%s\n\t   L.name:%s\n\t   Tele.P:%s\n\t   Cell.P:%s\n\t   }",
                DB->fname, DB->lname, DB->telep, DB->cellp);
     }
-    printf("\nPress a key to search another contact.");
+    printf("\nPress a key to search another Contact.");
     getc(stdin);
     search();
 }
 
 void searchc(void)
 {
-    char cell[15];
-    int i,find=0;
+    char cell[MAX_TEL];
+    int i = 0;
+    bool found = false;
 
     printf("\n::Enter a cellphone number to search:");
-    get_input(cell, 15);
+    get_input(cell, MAX_TEL);
 
 
     while (DB != NULL) {
         if(strcmp(cell, DB->fname) == 0) {
-            find = 1;
+            found = true;
             break;
         }
         DB = DB->next;
+        ++i;
     }
 
-    if(find == 0)
-        printf("\t\n<<Not Find!There is no contact with this cellphone number in phone book.>>");
+    if(!found)
+        printf("\t\n<<Not Find!There is no Contact with this cellphone number in phone book.>>");
     else {
-        printf("\t\n<<Target contact found! Details:>>");
+        printf("\t\n<<Target Contact found! Details:>>");
         printf("\n\nCantact %2.2d{",i+1);
         printf("\n\t   F.Name:%s\n\t   L.name:%s\n\t   Tele.P:%s\n\t   Cell.P:%s\n\t   }",
                DB->fname, DB->lname, DB->telep, DB->cellp);
     }
-    printf("\nPress a key to search another contact.");
+    printf("\nPress a key to search another Contact.");
     getc(stdin);
     search();
 }
@@ -519,20 +559,19 @@ void swap_help(char a[], char b[], size_t size)
     strncpy(b, temp, size);
 }
 
-void swap(struct contact *a, struct contact *b)
+void swap(struct Contact *a, struct Contact *b)
 {
-    swap_help(a->fname, b->fname, 31 );
-    swap_help(a->lname, b->lname, 31 );
-    swap_help(a->telep, b->telep, 15 );
-    swap_help(a->cellp, b->cellp, 15 );
+    swap_help(a->fname, b->fname, MAX_NAME);
+    swap_help(a->lname, b->lname, MAX_NAME);
+    swap_help(a->telep, b->telep, MAX_TEL);
+    swap_help(a->cellp, b->cellp, MAX_TEL);
 }
 
 void sortf(void)
 {
-//    struct contact b;
     int swapped, i;
-    struct contact *a;
-    struct contact *b = NULL;
+    struct Contact *a;
+    struct Contact *b = NULL;
 
     if (DB == NULL)
         return;
@@ -542,8 +581,7 @@ void sortf(void)
         a = DB;
         while (a->next != b)
         {
-            if(strcmp(a->fname, a->next->fname) > 0)
-            {
+            if(strcmp(a->fname, a->next->fname) > 0) {
                 swap(a, a->next);
                 swapped = 1;
             }
@@ -555,7 +593,7 @@ void sortf(void)
 
     printf("\nplease wait... .Contacts will be sorted by first names.");
     list2();
-    printf("\n   ::Press any key to sort contact by another form... ");
+    printf("\n   ::Press any key to sort Contact by another form... ");
     getc(stdin);
     sort();
 }
@@ -563,8 +601,8 @@ void sortf(void)
 void sortl(void)
 {
     int swapped, i;
-    struct contact *a;
-    struct contact *b = NULL;
+    struct Contact *a;
+    struct Contact *b = NULL;
 
     if (DB == NULL)
         return;
@@ -587,7 +625,7 @@ void sortl(void)
 
     printf("\nplease wait... .Contacts will be sorted by last names.");
     list2();
-    printf("\n   ::Press any key to sort contact by another form... ");
+    printf("\n   ::Press any key to sort Contact by another form... ");
     getc(stdin);
     sort();
 }
@@ -595,8 +633,8 @@ void sortl(void)
 void sortp(void)
 {
     int swapped, i;
-    struct contact *a;
-    struct contact *b = NULL;
+    struct Contact *a;
+    struct Contact *b = NULL;
 
     if (DB == NULL)
         return;
@@ -619,7 +657,7 @@ void sortp(void)
 
     printf("\nplease wait... .Contacts will be sorted by telephone numbers.");
     list2();
-    printf("\n   ::Press any key to sort contact by another form... ");
+    printf("\n   ::Press any key to sort Contact by another form... ");
     getc(stdin);
     sort();
 }
@@ -627,8 +665,8 @@ void sortp(void)
 void sortc(void)
 {
     int swapped, i;
-    struct contact *a;
-    struct contact *b = NULL;
+    struct Contact *a;
+    struct Contact *b = NULL;
 
     if (DB == NULL)
         return;
@@ -638,8 +676,7 @@ void sortc(void)
         a = DB;
         while (a->next != b)
         {
-            if(strcmp(a->cellp, a->next->cellp) > 0)
-            {
+            if(strcmp(a->cellp, a->next->cellp) > 0) {
                 swap(a, a->next);
                 swapped = 1;
             }
@@ -651,14 +688,14 @@ void sortc(void)
 
     printf("\nPlease wait... .Contacts will be sort by cellphone numbers.");
     list2();
-    printf("\n   ::Press any key to sort contact by another form... ");
+    printf("\n   ::Press any key to sort Contact by another form... ");
     getc(stdin);
     sort();
 }
 
 void list()
 {
-    struct contact *temp = DB;
+    struct Contact *temp = DB;
     int i = 1;
     while(temp != NULL)
     {
@@ -669,7 +706,6 @@ void list()
         printf("Tel: %s\n ",temp->telep);
         printf("Cell: %s\n\n ",temp->cellp);
         temp = temp->next;
-
         i++;
     }
 
@@ -709,7 +745,7 @@ void list()
 
 void list2(void)
 {
-    struct contact *temp = DB;
+    struct Contact *temp = DB;
     int i = 1;
     while(temp != NULL)
     {
